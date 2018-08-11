@@ -1,0 +1,7 @@
+{% for file in text %}
+    {% if filename == file.filename %}
+        <p> {{ file.title }} </p>
+        <p> {{ file.created_time }} </p>
+        <p> {{ file.content }} </p>
+    {% endif %}
+{% endfor %}
