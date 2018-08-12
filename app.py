@@ -1,33 +1,52 @@
+from datetime import datetime
 from flask import Flask,render_template,abort
+from flask_sqlalchemy import SQLAlchemy
+
 import json
 import os
+
 app = Flask(__name__)
-app.config['TEMPLATES_AUTO_RELOAD'] = True
-path = '/home/shiyanlou/files'
-files = os.listdir(path)
-text = []
-for file in files:
-    if os.path.splitext(file)[1] == '.json':
-        with open (path+'/'+file,'r') as load_f:
-            load_dict = json.load(load_f)
-            load_dict.update({'filename':os.path.splitext(file)[0]})
-            text.append(load_dict)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root@localhost/test'
+
+db = SQLAlchemy(app)
+class File(db.Model):
+    __tablename__ = 'file'
+    id = db.Column(db.Integer, primary_key = True)
+    title = db.Column(db.String(80))
+    created_time = db.Column(db.DateTime)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
+    category = db.relationship('Category', uselist=False)
+    content = db.Column(db.Text)
+    def __init__(self,title,category,content,created_time = None):
+        self.title = title
+        if created_time == None:
+            created_time = datetime.utcnow()
+        self.created_time = created_time
+        self.category = category
+        self.content = content
+
+class Category(db.Model):
+    __tablename__ = 'category'
+    id = db.Column(db.Integer, primary_key = True)
+    name = db.Column(db.String(80))
+    files = db.relationship('File')
+    def __init__(self,name):
+        self.name = name
+
+
 
 @app.errorhandler(404)
 def not_found(error):
     return render_template('404.html'), 404
 @app.route('/')
 def index():
-    text
-    return render_template('index.html', text=text)
+    return render_template('index.html', text=File.query.all())
 @app.route('/files/<filename>')
 def file_index(filename):
-    flag = False
-    for file in text:
-        if filename == file['filename']:
-            flag = True
-    if flag == False:
+    try:
+        file_item = File.query.get(filename)
+    except:
         abort(404)
-    return render_template('file.html', filename = filename, text = text)
+    return render_template('file.html', file_item = file_item)
 
 
